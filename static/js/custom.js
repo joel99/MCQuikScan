@@ -27,7 +27,8 @@ fileInput.addEventListener( 'change', function( e ) {
       validUpload = true
     } else {
       label.innerHTML = "Select File"
-      status.innerHTML = fileName + " has an invalid file extension. Upload JPG, JPEG, or PNG"
+      if (fileName = '') status.innerHTML = "No file selected."
+      else status.innerHTML = fileName + " has an invalid file extension. Upload JPG, JPEG, or PNG"
       validUpload = false
     }
   }
@@ -49,10 +50,21 @@ uploadBtn.addEventListener( 'click', function( e ) {
 
     xhr.onload = function (e) {
       //success
-      data = e.target.response;
+      resultContainer.innerHTML = "";
+      data = JSON.parse(e.target.response)
       status.innerHTML = 'Image processed. Results below.'
-      console.log(data);
-      resultContainer.innerHTML = data; 
+      //console.log(data)
+      if (data["text"] == "fail") resultContainer.innerHTML = "Image processing failed."
+      else {
+	let qN = document.createElement('h4')
+	qN.innerHTML = "Question " + data["qN"] + ":"
+	resultContainer.appendChild(qN)
+	for (let i = 0; i < data["choices"].length; i++) {
+	  let curChoice = document.createElement('p')
+	  curChoice.innerHTML = data["choices"][i].toUpperCase()
+	  resultContainer.appendChild(curChoice)
+	}
+      }
     }
 
     xhr.onerror = function (e) {
