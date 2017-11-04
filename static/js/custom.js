@@ -7,6 +7,7 @@ const label = fileInput.nextElementSibling
 const status = document.getElementById('status-text')
 const preview = document.getElementById('preview-img')
 const uploadBtn = document.getElementById('upload-button')
+const resultContainer = document.getElementById('result')
 
 let validUpload = false
 
@@ -32,6 +33,7 @@ fileInput.addEventListener( 'change', function( e ) {
   }
 })
 
+//upload listener
 uploadBtn.addEventListener( 'click', function( e ) {
   e.preventDefault()
   let files = fileInput.files
@@ -47,7 +49,10 @@ uploadBtn.addEventListener( 'click', function( e ) {
 
     xhr.onload = function (e) {
       //success
+      data = e.target.response;
       status.innerHTML = 'Image processed. Results below.'
+      console.log(data);
+      resultContainer.innerHTML = data; 
     }
 
     xhr.onerror = function (e) {

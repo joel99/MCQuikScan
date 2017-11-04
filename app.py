@@ -21,6 +21,7 @@ def page_not_found(e):
 ALLOWED_EXTENSIONS = set(['jpg', 'jpeg', 'png'])
 UPLOAD_FOLDER = join(dirname(realpath(__file__)), "static/temp")
 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route("/upload/", methods=["POST"])
 def upload():
