@@ -1,0 +1,58 @@
+/* Custom stylesheet for minimal applications */
+
+#body-container{
+    margin: 50px;
+    padding: 20px;    
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+#monitor-container{
+    width: 30%;
+    margin: auto;
+    padding: 10px;
+}
+
+img{
+    max-height: 95%;
+    max-width: 95%;
+}
+
+hr {
+    border-top: 1px solid #8c8b8b;
+}
+
+.input-file{ /* HIDE */
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+.upload-input-label, .button{
+    cursor: pointer;
+    border: 3px solid black;   
+    border-radius: 4px;
+    padding: 20px 40px;
+    margin: 10px;
+    display: inline-block;
+    font-size: 24px;
+    text-align: center;
+    text-decoration: none;
+    background-color: #EEEEEE;
+}
+
+.upload-input-label:hover, .button:hover{
+    background-color: #FFFFFF;
+}
+
+.inputfile:focus + label {
+    outline: 1px dotted #000;
+    outline: -webkit-focus-ring-color auto 5px;
+}
+
+#status-text {
+    font-size: 20px;
+}

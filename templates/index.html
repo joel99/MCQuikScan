@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	<title>MC Quick Scan</title>
+	<link rel="stylesheet" type="text/css" href="/static/css/custom.css" />
+    </head>
+    <body>
+	<div id="body-container">
+	    <h1>A Scanning Tool for Processing Multiple Choice Forms</h1>
+	    <div id="upload-div">
+		<form id="upload-form">
+		    <input type="file" id="upload-input" class="input-file" name="upload" accept="image/*">
+		    <label for="upload-input" class="upload-input-label">
+			Select File
+		    </label>		    
+		    <button id="upload-button" class="button"> Upload Picture</button>
+		</form>
+	    </div>
+	    <div id="monitor-container">
+		<div id="status">
+		    <p id="status-text">No file selected.</p>
+		</div>
+		<hr>
+		<div id="preview">
+		    <img id="preview-img" />
+		</div>
+	    </div>
+	</div>
+
+	<script src="/static/js/custom.js"></script>
+    </body>
+</html>
