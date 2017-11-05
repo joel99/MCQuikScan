@@ -6,6 +6,8 @@ from PIL import Image
 import pytesseract
 import re
 import cv2
+from matplotlib import pyplot as plt
+import numpy as np
 
 app = Flask(__name__)
 app.secret_key = "secrets"
@@ -38,10 +40,58 @@ def upload():
         return json.dumps({"status": "Illegal filename"})
     filename = secure_filename(f.filename)
     f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    analyze(filename)
+    mask = analyze(filename)
     text = pytesseract.image_to_string(Image.open(UPLOAD_FOLDER + '/' + filename))
     ret = {"status": "success"}
     ret.update(processText(text))
+    
+    #now detect the circle (img should be blurred out)
+    #edges = cv2.Canny(mask.copy(), 0, 255)
+    """
+    blurred = cv2.blur(mask, (5, 5))
+    plt.subplot(121),plt.imshow(mask),plt.title('Original')
+    plt.xticks([]), plt.yticks([])
+    plt.subplot(122),plt.imshow(blurred),plt.title('Blurred')
+    plt.xticks([]), plt.yticks([])
+    plt.show()
+    
+    edges = cv2.medianBlur(mask, 5)
+    cimg = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
+
+    circles = cv2.HoughCircles(edges,cv2.HOUGH_GRADIENT,1,30,
+                            param1=50,param2=30,minRadius=10,maxRadius=200)
+    circles = np.uint16(np.around(circles))
+    for i in circles[0,:]:
+        # draw the outer circle
+        cv2.circle(cimg,(i[0],i[1]),i[2],(0,255,0),2)
+        # draw the center of the circle
+        cv2.circle(cimg,(i[0],i[1]),2,(0,0,255),3)
+    cv2.imshow('detected circles',cimg)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    """
+    """
+    contours = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
+                            cv2.CHAIN_APPROX_SIMPLE)
+    contours=contours[1]
+    for cnt in contours:
+        M = cv2.moments(cnt)
+        cX = int(M["m10"] / M["m00"])
+	cY = int(M["m01"] / M["m00"])
+ 
+	# draw the contour and center of the shape on the image
+	cv2.drawContours(mask, [cnt], -1, (0, 255, 0), 2)
+	cv2.circle(mask, (cX, cY), 7, (255, 255, 255), -1)
+	cv2.putText(mask, "center", (cX - 20, cY - 20),
+		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+ 
+    plt.imshow(mask, cmap = 'gray', interpolation = 'bicubic')
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
+"""
+    #cv2.imshow("Image", mask)
+    #cv2.waitKey(0)
+    
     return json.dumps(ret)
 
 def allowed_file(filename):
@@ -52,7 +102,10 @@ def allowed_file(filename):
 def analyze(fn):
     img = cv2.imread(UPLOAD_FOLDER + '/' + fn, 0)
     gray = cv2.medianBlur( img, 1 ) #denoise
-    cv2.imwrite(UPLOAD_FOLDER + '/' + fn, gray)
+    thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+                                cv2.THRESH_BINARY,11,1)
+    cv2.imwrite(UPLOAD_FOLDER + '/' + fn, thresh)
+    return thresh
     
 def processText(text): #account for interference from circling
     #manual string parsing, what this (update with regex)
@@ -94,6 +147,7 @@ def processText(text): #account for interference from circling
         sanitized = sanPat.findall(choice)[-1]
         ret["choices"].append(sanitized)
     ret["text"] = text
+    
     return ret
     
 if __name__ == "__main__":
