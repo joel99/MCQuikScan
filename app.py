@@ -101,9 +101,9 @@ def allowed_file(filename):
 # Basic preprocess
 def analyze(fn):
     img = cv2.imread(UPLOAD_FOLDER + '/' + fn, 0)
-    gray = cv2.medianBlur( img, 1 ) #denoise
+    gray = cv2.medianBlur( img, 1 ) #denoise    
     thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
-                                cv2.THRESH_BINARY,11,1)
+                                   cv2.THRESH_BINARY,11,3)
     cv2.imwrite(UPLOAD_FOLDER + '/' + fn, thresh)
     return thresh
     
@@ -135,21 +135,44 @@ def processText(text): #account for interference from circling
     print choices
     #print "END DEBUG"
     #parse in reverse - search for a,b,c,d,e or 1,2,3,4,5 in some regularity
-    choicePat = re.compile('\S?[a-eA-E1-5]')
+    #choicePat = re.compile('\S?[a-eA-E1-5]')
+    #ineffective pattern if char not recognized
     #we expect this to appear somewhat regularly
-    matchArr = [choicePat.match(choice) for choice in choices]
-    resArr = map(lambda m: m.group(), filter(lambda m: m != None, matchArr)) #python chaining is sacrilegious    
-    ret["choices"] = []
-    for choice in resArr[-4:]: #for now, take last 4 chunks
-        #isolate the A B C D E withini these (assume they are non-num for now)
-        #sanitize the last bit
-        sanPat = re.compile('[a-eA-E1-5][).]?') 
-        sanitized = sanPat.findall(choice)[-1]
-        ret["choices"].append(sanitized)
+    #matchArr = [choicePat.match(choice) for choice in choices]
+    #resArr = map(lambda m: m.group(), filter(lambda m: m != None, choices)) #python chaining is sacrilegious
+
+    #matching first bit is more effective.
+    sanPat = re.compile('[a-eA-E1-5]')
+    ret["choices"] = [sanPat.search(choice).group().upper() if sanPat.search(choice) != None else "" for choice in choices[-4:]]
+
+    #fuzzy match with alpha or numeric:
+    choiceMatches = [['A','B','C','D'],['1','2','3','4']]    
+    bestMatch = reduce(lambda a,b: a if Levenshtein(ret["choices"], a) < Levenshtein(ret["choices"], b) else b, choiceMatches)
+    ret["choices"] = bestMatch
     ret["text"] = text
     
     return ret
-    
+
+#Dynamic - overkill exercise
+def Levenshtein(s1, s2):
+    #s1 is src, s2 is target (gives changes to reach s2)
+    #dist is len(s1) by len(s2) matrix - ij is dist between s1[:i], s2[:j]
+    dist = [[0 for col in range(len(s2) + 1)] for row in range(len(s1) + 1)]
+    #initial
+    for i in range(1, len(s1) + 1):
+        dist[i][0] = i
+    for j in range(1, len(s2) + 1):
+        dist[0][j] = j
+    #dynamic
+    for j in range(1, len(s2) + 1):
+        for i in range(1, len(s1) + 1):
+            subCost = 0 if s2[j-1] == s1[i-1] else 1
+            dist[i][j] = min(dist[i-1][j-1] + subCost,
+                             dist[i-1][j] + 1,
+                             dist[i][j-1] + 1)            
+    return dist[-1][-1]
+            
+        
 if __name__ == "__main__":
     app.debug = True
     app.run()
