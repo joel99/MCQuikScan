@@ -3,11 +3,13 @@ from os.path import join, dirname, realpath
 from werkzeug.utils import secure_filename
 import os, json
 from PIL import Image
-import pytesseract
+from pytesseract import pytesseract
 import re
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
+import csv
+#from tesserocr import PyTessBaseAPI, RIL
 
 app = Flask(__name__)
 app.secret_key = "secrets"
@@ -41,9 +43,31 @@ def upload():
     filename = secure_filename(f.filename)
     f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     mask = analyze(filename)
-    text = pytesseract.image_to_string(Image.open(UPLOAD_FOLDER + '/' + filename))
+    print "starting tesseract"
+    hocr = 'pytesseractTemp'
+    text = pytesseract.run_tesseract(UPLOAD_FOLDER + '/' + filename, UPLOAD_FOLDER + '/' + hocr, lang='eng', boxes=True, config="hocr")
+    boxes = []
+    with open(UPLOAD_FOLDER + '/' + hocr + '.box', 'rb') as f:
+        reader = csv.reader(f, delimiter = ' ')
+        for row in reader:
+            if(len(row)==6):
+                boxes.append(row)
+    boxes = pytesseract.image_to_string(Image.open(UPLOAD_FOLDER + '/' + filename), lang="eng", boxes = True).split('\n')
+    text = pytesseract.image_to_string(Image.open(UPLOAD_FOLDER + '/' + filename), lang="eng")
+
     ret = {"status": "success"}
-    ret.update(processText(text))
+    ret.update(processText(text, boxes))
+    #mark it out
+    for b in ret["boxes"]:
+        #marking box
+        print "marking box"
+        print b
+        cx = int(b[1]) + int(b[3]) / 2
+        cy = int(b[2]) + int(b[4]) / 2
+        cv2.circle(mask, (cx, cy), 17, (255, 0, 255), -1)
+
+    cv2.imshow('found circles', mask)
+    cv2.waitKey(0)
     
     #now detect the circle (img should be blurred out)
     #edges = cv2.Canny(mask.copy(), 0, 255)
@@ -101,13 +125,15 @@ def allowed_file(filename):
 # Basic preprocess
 def analyze(fn):
     img = cv2.imread(UPLOAD_FOLDER + '/' + fn, 0)
-    gray = cv2.medianBlur( img, 1 ) #denoise    
+    #why is this showingin yellow?
+    gray = cv2.medianBlur( img, 1 ) #denoise
+
     thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
                                    cv2.THRESH_BINARY,11,3)
     cv2.imwrite(UPLOAD_FOLDER + '/' + fn, thresh)
     return thresh
     
-def processText(text): #account for interference from circling
+def processText(text, boxes): #account for interference from circling
     #manual string parsing, what this (update with regex)
     #First we find the question start
     ret = {'text': 'success'}
@@ -130,11 +156,30 @@ def processText(text): #account for interference from circling
     #Now look for the choices (assume a,b,c,d,e or 1,2,3,4,5 after some space character)
     whitespace = re.compile('[\t\n]+') #one or more whitespace not including spaces
 
-    choices = re.split(whitespace, text)
-    #print "START DEBUG"
-    print choices
-    #print "END DEBUG"
-    #parse in reverse - search for a,b,c,d,e or 1,2,3,4,5 in some regularity
+    choices = re.split(whitespace, text)[-4:] #assume last 4
+
+    #identify box locations (approx is fine, match region)
+    boxText = "".join([b[0] for b in boxes])
+    illegal = re.compile('[^\x00-\x7F]+')
+    boxClean = re.sub(illegal, '*', boxText)
+    targetPat = re.compile('[\x00-\x7F]\)')
+    #put these in as first guess
+    print boxClean
+    approxI = [m.start(0) for m in re.finditer(targetPat, boxClean)]
+    print approxI
+    #then match below if better - (But it won't ever be. - overriding default for some reason)
+    """
+    for i in range(len(choices)):
+        cClean = re.sub(whitespace, '', choices[i])
+        index = boxClean.find(cClean[:2])
+        if index != -1:
+            approxI[i] = index
+    print "debug approx"
+    print approxI
+    print len(boxes)
+    """
+    ret["boxes"] = [boxes[i].split() if i != -1 else [] for i in approxI]    
+    print ret["boxes"]
     #choicePat = re.compile('\S?[a-eA-E1-5]')
     #ineffective pattern if char not recognized
     #we expect this to appear somewhat regularly
@@ -143,7 +188,7 @@ def processText(text): #account for interference from circling
 
     #matching first bit is more effective.
     sanPat = re.compile('[a-eA-E1-5]')
-    ret["choices"] = [sanPat.search(choice).group().upper() if sanPat.search(choice) != None else "" for choice in choices[-4:]]
+    ret["choices"] = [sanPat.search(choice).group().upper() if sanPat.search(choice) != None else "" for choice in choices]
 
     #fuzzy match with alpha or numeric:
     choiceMatches = [['A','B','C','D'],['1','2','3','4']]    

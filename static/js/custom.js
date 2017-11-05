@@ -53,7 +53,7 @@ uploadBtn.addEventListener( 'click', function( e ) {
       resultContainer.innerHTML = "";
       data = JSON.parse(e.target.response)
       status.innerHTML = 'Image processed. Results below.'
-      //console.log(data)
+      console.log(data)
       if (data["text"] === "fail" || data["qN"] === undefined) resultContainer.innerHTML = "Image processing failed."
       else {
 	let qN = document.createElement('h4')
