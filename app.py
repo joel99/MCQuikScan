@@ -55,16 +55,31 @@ def upload():
     boxes = pytesseract.image_to_string(Image.open(UPLOAD_FOLDER + '/' + filename), lang="eng", boxes = True).split('\n')
     text = pytesseract.image_to_string(Image.open(UPLOAD_FOLDER + '/' + filename), lang="eng")
 
+    for b in boxes:
+        #marking box        
+        be = b.split()
+        if len(be) == 6:
+            print "marking box"
+            print b
+            cx = int(be[1]) + int(be[3]) / 2
+            cy = int(be[2]) + int(be[4]) / 2
+            cv2.circle(mask, (cx, cy), 7, (0, 0, 0), -1)
+
+    cv2.imshow('found circles', mask)
+    cv2.waitKey(0)
+    
+    
     ret = {"status": "success"}
     ret.update(processText(text, boxes))
     #mark it out
     for b in ret["boxes"]:
         #marking box
+        
         print "marking box"
         print b
         cx = int(b[1]) + int(b[3]) / 2
         cy = int(b[2]) + int(b[4]) / 2
-        cv2.circle(mask, (cx, cy), 17, (255, 0, 255), -1)
+        cv2.circle(mask, (cx, cy), 7, (0, 0, 0), -1)
 
     cv2.imshow('found circles', mask)
     cv2.waitKey(0)
@@ -126,10 +141,13 @@ def allowed_file(filename):
 def analyze(fn):
     img = cv2.imread(UPLOAD_FOLDER + '/' + fn, 0)
     #why is this showingin yellow?
-    gray = cv2.medianBlur( img, 1 ) #denoise
-
-    thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
-                                   cv2.THRESH_BINARY,11,3)
+    gray = cv2.medianBlur( img, 3 ) #denoise
+    #cv2.imshow("Image", gray)
+    _, thresh = cv2.threshold(gray,225,255,cv2.THRESH_BINARY)
+    #_, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    #thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+     #                              cv2.THRESH_BINARY,11,3)
+    cv2.imshow("Image2", thresh)
     cv2.imwrite(UPLOAD_FOLDER + '/' + fn, thresh)
     return thresh
     
